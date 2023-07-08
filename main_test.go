@@ -8,12 +8,11 @@ import (
 )
 
 func TestNewTask(t *testing.T) {
-	wg := sync.WaitGroup{}
-	mut := sync.RWMutex{}
+	mut := sync.Mutex{}
 	logger := make(chan string)
 	tasker := make(chan taskm.Task)
 	taskremover := make(chan taskm.Task)
-	tm := taskm.NewTaskManager(&wg, &tasker, &taskremover, &logger, &mut)
+	tm := taskm.NewTaskManager(&tasker, &taskremover, &logger, &mut)
 	go tm.NewTask("echo", "Hello")
 	go tm.NewTask("echo", "World")
 }

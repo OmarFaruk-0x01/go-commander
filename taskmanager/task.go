@@ -3,15 +3,15 @@ package taskmanager
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"sync"
+	"regexp"
+	"strings"
+	"syscall"
 )
 
 type Task struct {
 	command []string
-	wg      *sync.WaitGroup
 	done    *chan Task
 	logger  *chan string
 	tasker  *chan Task
@@ -20,38 +20,29 @@ type Task struct {
 	PID     int
 }
 
-func ErrorLogger(r io.Reader, logger *chan string) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		*logger <- scanner.Text()
-	}
-}
-
 func (t *Task) Start() {
 	if len(t.command) < 2 {
-		t.wg.Done()
 		*t.done <- *t
 	}
 
 	cmd := exec.Command(t.command[0], t.command[1:]...)
 	t.cmd = cmd
 
+	regex := regexp.MustCompile(`\033\[[0-9;]*[mK]`)
+
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		t.wg.Done()
 		panic(err)
 	}
 	defer stderr.Close()
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		t.wg.Done()
 		*t.done <- *t
 	}
 	defer stdout.Close()
 
 	if err := cmd.Start(); err != nil {
-		t.wg.Done()
 		*t.done <- *t
 	}
 	t.PID, err = t.GetPID()
@@ -60,24 +51,26 @@ func (t *Task) Start() {
 	}
 	*t.tasker <- *t
 
-	t.wg.Add(2)
+	errscanner := bufio.NewScanner(stderr)
 	go func() {
 		defer stderr.Close() // Close the stderr pipe when done
-		ErrorLogger(stderr, t.logger)
-		t.wg.Done()
+		for errscanner.Scan() {
+			*t.logger <- fmt.Sprintf("[ERROR](bg:red,fg:white)-[%d](fg:%s): %s", t.PID, t.color, regex.ReplaceAllString(errscanner.Text(), ""))
+		}
+
 	}()
 	scanner := bufio.NewScanner(stdout)
+
 	go func() {
 		defer stdout.Close() // Close the stdout pipe when done
 		for scanner.Scan() {
-			*t.logger <- fmt.Sprintf("[%d](fg:%s): %s", t.cmd.Process.Pid, t.color, scanner.Text())
+
+			*t.logger <- fmt.Sprintf("[%d](fg:%s): %s", t.PID, t.color, regex.ReplaceAllString(scanner.Text(), ""))
 		}
-		t.wg.Done()
 	}()
 	if err := cmd.Wait(); err != nil {
-		fmt.Println(err)
+		*t.logger <- fmt.Sprintf("[ERROR](bg:red,fg:white)-[%d](fg:%s): %s", t.PID, t.color, err)
 	}
-	t.wg.Done()
 	*t.done <- *t
 }
 
@@ -86,7 +79,7 @@ func (task *Task) Stop() error {
 	if err != nil {
 		return err
 	}
-	err = process.Signal(os.Interrupt)
+	err = process.Signal(syscall.SIGTERM)
 	if err != nil {
 		return err
 	}
@@ -105,10 +98,5 @@ func (t Task) GetCommands() []string {
 	return t.command
 }
 func (t Task) String() string {
-	str := ""
-	for _, c := range t.command[1:] {
-		str += " " + c
-	}
-
-	return fmt.Sprintf("%s %v", t.cmd.Path, str)
+	return strings.Join(t.command, " ")
 }

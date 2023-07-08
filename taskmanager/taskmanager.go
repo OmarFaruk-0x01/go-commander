@@ -13,19 +13,18 @@ type TaskManager struct {
 	tasker      *chan Task
 	taskremover *chan Task
 	tasks       []*Task
-	wg          *sync.WaitGroup
-	mut         *sync.RWMutex
+	mut         *sync.Mutex
 	colors      []string
 }
 
-func NewTaskManager(wg *sync.WaitGroup, tasker *chan Task, taskremover *chan Task, logger *chan string, mut *sync.RWMutex) *TaskManager {
+func NewTaskManager(tasker *chan Task, taskremover *chan Task, logger *chan string, mut *sync.Mutex) *TaskManager {
 	return &TaskManager{
-		wg:          wg,
 		logger:      logger,
 		tasker:      tasker,
 		taskremover: taskremover,
 		tasks:       []*Task{},
-		colors:      []string{"red", "blue", "cyan", "yellow", "green", "white"},
+		colors:      []string{"red", "blue", "cyan", "yellow", "green", "black"},
+		mut:         mut,
 	}
 }
 
@@ -36,23 +35,18 @@ func (tm *TaskManager) GetTasks() []*Task {
 func (tm *TaskManager) NewTask(baseCmd string, args ...string) {
 	task := &Task{
 		command: append(append([]string{}, baseCmd), args...),
-		wg:      tm.wg,
 		done:    tm.taskremover,
 		logger:  tm.logger,
 		tasker:  tm.tasker,
 	}
 	tm.mut.Lock()
 	tm.tasks = append(tm.tasks, task)
-	tm.mut.Unlock()
-	for i, t := range tm.tasks {
-		listLength := len(tm.colors)
-		selectedIndex := i % listLength
-		if selectedIndex < 0 {
-			selectedIndex += listLength - 1
-		}
-		t.color = tm.colors[selectedIndex]
-
+	selectedIndex := len(tm.tasks) - 1
+	if selectedIndex >= len(tm.colors) {
+		selectedIndex = selectedIndex % len(tm.colors)
 	}
+	task.color = tm.colors[selectedIndex]
+	tm.mut.Unlock()
 
 	task.Start()
 }
@@ -78,15 +72,12 @@ func (tm *TaskManager) StopTask(task *Task) {
 func (tm *TaskManager) RestartTask(task *Task) {
 	task.Stop()
 	tm.RemoveTask(task)
-	tm.wg.Add(3)
 	go func() {
 		*tm.logger <- fmt.Sprintf("[%d](fg:%s): [TERMINATED](bg:red,fg:white)", task.PID, task.GetColor())
-		tm.wg.Done()
 	}()
-	go tm.NewTask(task.command[0], task.command...)
+	go tm.NewTask(task.command[0], task.command[1:]...)
 	go func() {
 		*tm.logger <- fmt.Sprintf("[[%s]](fg:%s): [RESTARTED](bg:cyan,fg:white)", task.String(), task.GetColor())
-		tm.wg.Done()
 	}()
 }
 
@@ -126,7 +117,6 @@ func (tm *TaskManager) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 // 	for {
 // 		ch, _, err := keyboard.GetSingleKey()
 // 		if err != nil {
-// 			tm.wg.Done()
 // 			panic(err)
 // 		}
 // 		*tm.logger <- strconv.QuoteRuneToASCII(ch)
