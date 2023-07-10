@@ -13,6 +13,6 @@ func TestNewTask(t *testing.T) {
 	tasker := make(chan taskm.Task)
 	taskremover := make(chan taskm.Task)
 	tm := taskm.NewTaskManager(&tasker, &taskremover, &logger, &mut)
-	go tm.NewTask("echo", "Hello")
-	go tm.NewTask("echo", "World")
+	go tm.NewTask("echo Hello")
+	go tm.NewTask("echo World")
 }

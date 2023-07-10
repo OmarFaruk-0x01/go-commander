@@ -32,20 +32,18 @@ func (tm *TaskManager) GetTasks() []*Task {
 	return tm.tasks
 }
 
-func (tm *TaskManager) NewTask(baseCmd string, args ...string) {
+func (tm *TaskManager) NewTask(command string) {
 	task := &Task{
-		command: append(append([]string{}, baseCmd), args...),
+		command: command,
 		done:    tm.taskremover,
 		logger:  tm.logger,
 		tasker:  tm.tasker,
 	}
 	tm.mut.Lock()
 	tm.tasks = append(tm.tasks, task)
-	selectedIndex := len(tm.tasks) - 1
-	if selectedIndex >= len(tm.colors) {
-		selectedIndex = selectedIndex % len(tm.colors)
-	}
-	task.color = tm.colors[selectedIndex]
+	task.color = tm.colors[0]
+	tm.colors = tm.colors[1:]
+	tm.colors = append(tm.colors, task.color)
 	tm.mut.Unlock()
 
 	task.Start()
@@ -75,7 +73,7 @@ func (tm *TaskManager) RestartTask(task *Task) {
 	go func() {
 		*tm.logger <- fmt.Sprintf("[%d](fg:%s): [TERMINATED](bg:red,fg:white)", task.PID, task.GetColor())
 	}()
-	go tm.NewTask(task.command[0], task.command[1:]...)
+	go tm.NewTask(task.command)
 	go func() {
 		*tm.logger <- fmt.Sprintf("[[%s]](fg:%s): [RESTARTED](bg:cyan,fg:white)", task.String(), task.GetColor())
 	}()

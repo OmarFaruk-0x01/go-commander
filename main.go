@@ -22,7 +22,8 @@ type State struct {
 	taskPage      int
 	taskListLimit int
 
-	tm *taskm.TaskManager
+	selectedLogs map[int]string
+	tm           *taskm.TaskManager
 }
 type Cmds []string
 
@@ -74,6 +75,7 @@ func main() {
 		taskListLimit: 5,
 		tm:            tm,
 		autoScroll:    true,
+		selectedLogs:  map[int]string{},
 	}
 
 	flag.Var(&cmds, "cmd", "shell commands \"<cmd>\" (e.g. ./commander -cmd \"echo hello\" -cmd \"echo world\" ...)")
@@ -90,8 +92,7 @@ func main() {
 	defer ui.Close()
 
 	for _, c := range cmds {
-		cmd := strings.Split(c, " ")
-		go tm.NewTask(cmd[0], cmd[1:]...)
+		go tm.NewTask(c)
 	}
 
 	termWidth, termHeight := ui.TerminalDimensions()
@@ -140,6 +141,7 @@ func main() {
 
 	ui.Render(grid)
 	uiEvents := ui.PollEvents()
+	// logSelected := 0
 
 	for {
 		select {
@@ -160,6 +162,7 @@ func main() {
 					taskList.BorderStyle = focusedTabStyle
 					logList.BorderStyle = normalTabStyle
 					ui.Render(grid)
+					ui.Render(taskList)
 					ui.Render(help)
 				}
 			case "<Escape>":
@@ -174,6 +177,12 @@ func main() {
 					ui.Render(help)
 					ui.Render(taskList)
 				}
+				if len(state.selectedLogs) > 0 {
+					for index, log := range state.selectedLogs {
+						logList.Rows[index] = log
+					}
+					ui.Render(logList)
+				}
 			case "<Space>":
 				if !state.isDialogOpen && taskList.SelectedRow != 0 && state.focusedTab == "task" {
 					state.isDialogOpen = true
@@ -186,6 +195,8 @@ func main() {
 					menu.BorderStyle = focusedTabStyle
 					menu.Title = fmt.Sprintf("Settings [%s]", tm.GetTasks()[taskList.SelectedRow-1].String())
 					ui.Render(grid)
+					ui.Render(help)
+					ui.Render(taskList)
 				}
 			case "<Tab>":
 				switch state.focusedTab {
@@ -292,6 +303,23 @@ func main() {
 				grid.SetRect(0, 0, payload.Width, payload.Height)
 				ui.Clear()
 				ui.Render(grid)
+				// case "<MouseLeft>":
+				// 	_, mouseY := e.Payload.(ui.Mouse).X, e.Payload.(ui.Mouse).Y
+				// 	if mouseY >= logList.Inner.Min.Y && mouseY <= logList.Inner.Max.Y {
+				// 		logSelected = mouseY - logList.Inner.Min.Y
+				// 		if logSelected >= 0 && logSelected < len(logList.Rows) {
+				// 			prevLog, isPreviousSelected := state.selectedLogs[logSelected]
+				// 			if isPreviousSelected {
+				// 				logList.Rows[logSelected] = prevLog
+				// 				delete(state.selectedLogs, logSelected)
+				// 			} else {
+				// 				selectedLog := logList.Rows[logSelected]
+				// 				state.selectedLogs[logSelected] = selectedLog
+				// 				logList.Rows[logSelected] = fmt.Sprintf("[%s](fg:black,bg:white)", selectedLog)
+				// 			}
+				// 			ui.Render(logList)
+				// 		}
+				// 	}
 			}
 		case <-tasker:
 			{
