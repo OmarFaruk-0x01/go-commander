@@ -174,7 +174,6 @@ func main() {
 					state.focusedTab = "task"
 					taskList.BorderStyle = focusedTabStyle
 					logList.BorderStyle = normalTabStyle
-					ui.Render(help)
 					ui.Render(taskList)
 				}
 				if len(state.selectedLogs) > 0 {
@@ -188,15 +187,13 @@ func main() {
 					state.isDialogOpen = true
 					grid.Items = make([]*ui.GridItem, 0)
 					grid.Set(
-						ui.NewRow(1.0, ui.NewCol(.5/2, ui.NewRow(1.0/2, taskList), ui.NewRow(1.0/2, dialog)), ui.NewCol(1.5/2, logList)),
+						ui.NewRow(1.0, ui.NewCol(.5/2, ui.NewRow(1.0/2, dialog), ui.NewRow(1.0/2, help)), ui.NewCol(1.5/2, logList)),
 					)
 					state.focusedTab = "setting"
 					taskList.BorderStyle = normalTabStyle
 					menu.BorderStyle = focusedTabStyle
 					menu.Title = fmt.Sprintf("Settings [%s]", tm.GetTasks()[taskList.SelectedRow-1].String())
 					ui.Render(grid)
-					ui.Render(help)
-					ui.Render(taskList)
 				}
 			case "<Tab>":
 				switch state.focusedTab {
@@ -223,6 +220,7 @@ func main() {
 					} else {
 						taskList.SelectedRowStyle = selectedItemStyle
 					}
+					ui.Render(taskList)
 				// for i := 1; i < len(taskList.Rows); i++ {
 				// 	if i == taskList.SelectedRow {
 				// 		taskList.RowStyles[i] = selectedItemStyle
@@ -238,9 +236,8 @@ func main() {
 					if menu.SelectedRow > len(menu.Rows)-1 {
 						menu.SelectedRow = 0
 					}
-					ui.Render(menu)
+					ui.Render(dialog)
 				}
-				ui.Render(taskList)
 			case "<Up>":
 				switch state.focusedTab {
 				case "task":
@@ -253,6 +250,7 @@ func main() {
 					} else {
 						taskList.SelectedRowStyle = selectedItemStyle
 					}
+					ui.Render(taskList)
 					// for i := 0; i < len(taskList.Rows); i++ {
 					// 	if i == taskList.SelectedRow {
 					// 		taskList.RowStyles[i] = selectedItemStyle
@@ -260,7 +258,6 @@ func main() {
 					// 		taskList.RowStyles[i] = normalTabStyle
 					// 	}
 					// }
-					ui.Render(taskList)
 
 				case "logs":
 					logList.ScrollUp()
@@ -270,7 +267,7 @@ func main() {
 					if menu.SelectedRow < 0 {
 						menu.SelectedRow = len(menu.Rows) - 1
 					}
-					ui.Render(menu)
+					ui.Render(dialog)
 				}
 			case "j", "<MouseWheelDown>":
 				state.autoScroll = false
