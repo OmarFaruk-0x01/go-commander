@@ -1,6 +1,8 @@
 # CLI Task Manager with GO
 
-![Interface](/demo.png)
+![Interface](/demo/demo.gif)
+
+[Demo Video](/demo/demo.webm)
 
 The Commander is a flexible and powerful cli tool for running multiple commands simultaneously, with additional features like graceful task termination, keypress interactions, log management, and restart tasks. It provides a simple and intuitive UI to manage concurrent tasks in your Terminal.
 
