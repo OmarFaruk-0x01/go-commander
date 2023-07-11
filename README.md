@@ -32,10 +32,10 @@ To use the Commander in your system, you need to have Go installed. Then, you ca
 
 ```shell
 # Linux
-sudo curl -L https://github.com/OmarFaruk-0x01/go-commander/releases/download/v1.0.0/commander-linux-amd64 --output /usr/bin/commander
+sudo curl -L https://github.com/OmarFaruk-0x01/go-commander/releases/download/v1.0.1/commander-linux-amd64 --output /usr/bin/commander
 
 # Mac
-sudo curl -L https://github.com/OmarFaruk-0x01/go-commander/releases/download/v1.0.0/commander-darwin-amd64 --output /usr/local/bin/commander
+sudo curl -L https://github.com/OmarFaruk-0x01/go-commander/releases/download/v1.0.1/commander-darwin-amd64 --output /usr/local/bin/commander
 ```
 
 ## Usage
