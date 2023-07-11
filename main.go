@@ -79,9 +79,18 @@ func main() {
 	}
 
 	flag.Var(&cmds, "cmd", "shell commands \"<cmd>\" (e.g. ./commander -cmd \"echo hello\" -cmd \"echo world\" ...)")
+
+	showVersion := flag.Bool("v", false, "Current Version of Commander")
+
 	flag.Parse()
 
+	if *showVersion {
+		fmt.Println("v1.0.1")
+		return
+	}
+
 	if len(cmds) == 0 {
+		fmt.Println("commander v1.0.1")
 		flag.PrintDefaults()
 		return
 	}
